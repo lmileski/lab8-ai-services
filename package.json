@@ -1,0 +1,26 @@
+{
+  "name": "lab8-ai-services",
+  "version": "1.0.0",
+  "description": "Lab 8 - COMP 305 - Fall 2025",
+  "main": "index.js",
+  "scripts": {
+    "start": "http-server ./src -p 3000 -c-1",
+    "test": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lmileski/lab8-ai-services.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lmileski/lab8-ai-services/issues"
+  },
+  "homepage": "https://github.com/lmileski/lab8-ai-services#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.10.0",
+    "http-server": "^14.1.1"
+  }
+}
