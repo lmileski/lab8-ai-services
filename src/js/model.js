@@ -1,7 +1,23 @@
+/**
+ * model - manages chat messages and persistence with localStorage.
+ * implements the MVC pattern's model layer
+ * 
+ * @class
+ */
 // model manages messages and persistence and notifies observers on change
+/**
+ * generate a unique message ID using timestamp and random string.
+ *
+ * @returns {string} Unique ID (e.g., 'lx5q2k0.8f3j2k1p9d')
+ */
 const makeId = () => Date.now().toString(36) + Math.random().toString(16).slice(2);
 
 export class Model {
+	/**
+	 * create a model instance.
+	 * 
+	 * @param {string} [key='chat_v1'] - localStorage key for persisting messages
+	 */
 	constructor(key = 'chat_v1') {
 		this.key = key;
 		this.messages = [];
@@ -10,17 +26,27 @@ export class Model {
 		this.load();
 	}
 
-	// allow views/controllers to subscribe to changes
+	/**
+	 * subscribe to state changes
+	 * 
+	 * @param {Function} fn - Callback function that receives state updates
+	 */
 	onChange(fn) {
 		this.watchers.push(fn);
 	}
 
-	// make current state aware to listeners
+	/**
+	 * notify all watchers of state change
+	 */
 	notify() {
 		this.watchers.forEach(fn => fn(this.getState()));
 	}
 
-	// return a safe copy of state for rendering
+	/**
+	 * get a safe copy of current state for rendering.
+	 * 
+	 * @returns {Object} state object with messages array, count, and lastSaved timestamp
+	 */
 	getState() {
 		return {
 			messages: [...this.messages],
@@ -67,7 +93,13 @@ export class Model {
 		}
 	}
 
-	// create a message
+	/**
+	 * Add a new message to the chat.
+	 * 
+	 * @param {string} text - Message content
+	 * @param {string} role - Message role ('user' or 'bot')
+	 * @returns {Object|null} Created message object, or null if text is empty
+	 */
 	addMessage(text, role) {
 		const t = String(text || '').trim();
 		if (!t) return null;
@@ -84,7 +116,13 @@ export class Model {
 		return msg;
 	}
 
-	// update (just user messages)
+	/**
+	 * Update an existing user message.
+	 * 
+	 * @param {string} id - Message ID to update
+	 * @param {string} newText - New message text
+	 * @returns {boolean} True if updated successfully, false otherwise
+	 */
 	updateMessage(id, newText) {
 		const m = this.messages.find(x => x.id === id);
 		if (!m || m.role !== 'user') return false;

@@ -1,8 +1,25 @@
-// view owns all dom creation, events, and renders based on model state
+/**
+ * View - handles all DOM creation, events, and rendering based on model state.
+ * Implements the MVC pattern's view layer: pure UI logic, no business logic.
+ * 
+ * @class
+ */
+
+/**
+ * Format timestamp as HH:MM time string.
+ * 
+ * @param {number} ms - Timestamp in milliseconds
+ * @returns {string} Formatted time (e.g., '02:45 PM')
+ */
 const fmtClock = ms =>
 	new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-// label shows saved time only; design keeps this compact in header
+/**
+ * Format last saved timestamp for display.
+ * 
+ * @param {number|null} ms - Timestamp in milliseconds
+ * @returns {string} Formatted string (e.g., 'Saved: 02:45 PM' or 'Saved: —')
+ */
 const fmtSaved = ms => {
 	if (!ms) return 'Saved: —';
 	const d = new Date(ms);
@@ -10,7 +27,14 @@ const fmtSaved = ms => {
 	return `Saved: ${hhmm}`;
 };
 
-// helper to create elements with optional class/text
+/**
+ * Helper to create DOM elements with optional class and text.
+ * 
+ * @param {string} tag - HTML tag name
+ * @param {string|null} cls - CSS class name(s)
+ * @param {string|null} text - Text content
+ * @returns {HTMLElement} Created element
+ */
 const el = (tag, cls, text) => {
 	const n = document.createElement(tag);
 	if (cls) n.className = cls;
@@ -18,7 +42,16 @@ const el = (tag, cls, text) => {
 	return n;
 };
 
+/**
+ * View - handles all DOM creation, events, and rendering based on model state.
+ * Implements the MVC pattern's view layer: pure UI logic, no business logic.
+ * 
+ * @class
+ */
 export class View {
+	/**
+	 * Create a view instance and wire up DOM event listeners.
+	 */
 	constructor() {
 		// cache key nodes once
 		this.list = document.getElementById('messages');
@@ -144,7 +177,11 @@ export class View {
 		this.fileInput.value = '';
 	}
 
-	// render entire list from model state
+	/**
+	 * Render the entire message list from model state.
+	 * 
+	 * @param {Object} state - Model state with messages array
+	 */
 	render(state) {
 		this.list.innerHTML = '';
 		state.messages.forEach(m => this.list.append(this.renderItem(m)));
