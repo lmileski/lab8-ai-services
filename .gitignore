@@ -1,2 +1,32 @@
 .env
+.env.*
+
+# Dependencies
+node_modules/
+
+# Playwright artifacts
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / Editor junk
+.DS_Store
 Thumbs.db
+.idea/
+desktop.ini
+.vscode/
+
+# Build outputs
+build/
+dist/
