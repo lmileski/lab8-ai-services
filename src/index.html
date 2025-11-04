@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat Assistant</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main>
+    <header class="topbar">
+      <nav class="stack left">
+        <!-- message count first, then last saved -->
+				<span id="last-saved">Saved: —</span>
+        <span id="msg-count">0 messages</span>
+
+        <!-- ai provider menu styled like the pill buttons -->
+        <label for="ai-select" class="visually-hidden">ai provider</label>
+        <select id="ai-select" class="pill select">
+          <option value="eliza" selected>Eliza</option>
+          <option value="claude">Claude</option>
+          <option value="gemini">Gemini</option>
+        </select>
+      </nav>
+
+      <h1>Chat Assistant</h1>
+
+      <nav class="stack right">
+        <button id="export-btn" class="pill">Export</button>
+        <button id="import-btn" class="pill">Import</button>
+        <button id="clear-btn" class="pill">Clear</button>
+        <input id="file-input" type="file" accept="application/json" hidden />
+      </nav>
+    </header>
+
+    <section class="chat-window">
+      <ul id="messages"></ul>
+    </section>
+
+    <footer class="chat-input">
+      <form id="chat-form">
+        <label for="chat-input" class="visually-hidden">type a message</label>
+        <input
+          id="chat-input"
+          type="text"
+          placeholder="Type a message..."
+          autocomplete="off"
+        />
+        <button type="submit">Send</button>
+      </form>
+    </footer>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
