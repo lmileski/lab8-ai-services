@@ -1,5 +1,17 @@
-// controller coordinates user actions between view and model and calls the ai router
+/**
+ * Controller - coordinates user actions between view and model, and manages AI provider switching.
+ * Implements the MVC pattern's controller layer: handles user input, updates model, and orchestrates AI interactions.
+ * 
+ * @class
+ */
 export class Controller {
+	/**
+	 * Create a controller instance.
+	 * 
+	 * @param {Model} model - The data model managing chat messages
+	 * @param {View} view - The UI view handling DOM rendering
+	 * @param {AiRouter} ai - The AI router for provider management
+	 */
 	constructor(model, view, ai) {
 		this.model = model;
 		this.view = view;
@@ -38,46 +50,115 @@ export class Controller {
 		this.view.focusInput();
 	}
 
-	// when user toggles the provider dropdown
-	handleProviderChange(provider) {
+	/**
+	 * Handle AI provider switching with key validation.
+	 * Prompts for API key if needed, validates it, and persists to localStorage.
+	 * 
+	 * @param {string} provider - Provider name ('eliza', 'gemini', etc.)
+	 */
+	async handleProviderChange(provider) {
+		// keep previous provider so we can revert on invalid key
+		const prev = this.ai.provider;
+
+		// validate provider exists
 		try {
-			// set active provider
-			this.ai.provider = provider;
+			if (!this.ai.services || !(provider in this.ai.services)) throw new Error('unknown provider');
 		} catch (e) {
 			this.view.alert(e.message || 'unknown provider');
-			this.view.setProviderUI('eliza');
-			this.ai.provider = 'eliza';
+			this.view.setProviderUI(prev);
 			return;
 		}
 
-		// if provider is cloud, make sure we have an api key
-		if (provider === 'claude') {
-			this.view.alert('please enter your claude api key to continue.');
-			const fromUser = this.view.prompt('enter your claude api key:', '');
-			if (!fromUser) {
-				this.view.alert('no key entered. staying on eliza.');
-				this.view.setProviderUI('eliza');
-				this.ai.provider = 'eliza';
-				return;
+		// cloud providers require an api key. for gemini, if we already have one
+		// (either in-memory or in localStorage), reuse it without prompting.
+		// otherwise, prompt the user once and persist it.
+
+		if (provider === 'gemini') {
+			const svcG = this.ai.services.gemini;
+			let key = (svcG && svcG.apiKey) || '';
+			if (!key && typeof window !== 'undefined') {
+				key = localStorage.getItem('ai_gemini_api_key') || '';
+				if (key) this.ai.setGeminiKey(key);
 			}
-			this.ai.setClaudeKey(fromUser.trim());
-			// optionally persist to localstorage for this lab
-			localStorage.setItem('ai_claude_api_key', fromUser.trim());
-		} else if (provider === 'gemini') {
-			this.view.alert('please enter your gemini api key to continue.');
-			const fromUser = this.view.prompt('enter your gemini api key:', '');
-			if (!fromUser) {
-				this.view.alert('no key entered. staying on eliza.');
-				this.view.setProviderUI('eliza');
-				this.ai.provider = 'eliza';
-				return;
+
+			if (!key) {
+				// no stored key yet: ask the user once
+				this.view.alert('please enter your gemini api key to continue.');
+				const fromUser = this.view.prompt('enter your gemini api key:', '');
+				if (!fromUser) {
+					this.view.alert('no key entered. staying on ' + prev + '.');
+					this.view.setProviderUI(prev);
+					return;
+				}
+				key = fromUser.trim();
+				this.ai.setGeminiKey(key);
 			}
-			this.ai.setGeminiKey(fromUser.trim());
-			localStorage.setItem('ai_gemini_api_key', fromUser.trim());
+
+			// optimistic switch
+			this.ai.provider = provider;
+			this.view.setProviderUI(provider);
+
+			(async () => {
+				try {
+					const ok = await svcG.validateKey();
+					if (!ok) {
+						// invalid key: clear stored/in-memory key and allow immediate retry
+						if (typeof window !== 'undefined') localStorage.removeItem('ai_gemini_api_key');
+						this.ai.setGeminiKey('');
+						// prompt user to try again once
+						this.view.alert('gemini: api key rejected. please enter a new key.');
+						const retry = this.view.prompt('enter your gemini api key:', '');
+						if (retry) {
+							const newKey = String(retry).trim();
+							if (newKey) {
+								this.ai.setGeminiKey(newKey);
+								// keep UI on gemini while retrying
+								this.ai.provider = 'gemini';
+								this.view.setProviderUI('gemini');
+								let ok2 = false;
+								try { ok2 = await svcG.validateKey(); } catch { ok2 = false; }
+								if (ok2) {
+									if (typeof window !== 'undefined') localStorage.setItem('ai_gemini_api_key', newKey);
+									return; // stay on gemini, success
+								} else {
+									// second failure: revert and notify
+									if (typeof window !== 'undefined') localStorage.removeItem('ai_gemini_api_key');
+									this.ai.setGeminiKey('');
+								}
+							}
+						}
+						// revert to previous provider
+						this.ai.provider = prev;
+						this.view.setProviderUI(prev);
+						this.view.alert('gemini: api key rejected. reverted to ' + prev + '.');
+						return;
+					}
+					// success: persist key for future sessions
+					if (typeof window !== 'undefined') {
+						localStorage.setItem('ai_gemini_api_key', key);
+					}
+				} catch (err) {
+					// network/CORS error — do not persist unvalidated keys
+					if (typeof window !== 'undefined') localStorage.removeItem('ai_gemini_api_key');
+					this.ai.setGeminiKey('');
+					this.ai.provider = prev;
+					this.view.setProviderUI(prev);
+					this.view.alert('network/CORS error validating gemini key — consider running a local proxy. ' + (err?.message || ''));
+				}
+			})();
+		} else {
+			// other providers (eliza, etc.) — just switch
+			this.ai.provider = provider;
+			this.view.setProviderUI(provider);
 		}
 	}
 
-	// send either commits an inline edit or sends a fresh message
+	/**
+	 * Handle sending a message or committing an inline edit.
+	 * Adds user message to model, gets AI response, and displays bot reply.
+	 * 
+	 * @param {string} text - User's message text
+	 */
 	async handleSend(text) {
 		const trimmed = String(text || '').trim();
 		if (!trimmed) return;
@@ -92,11 +173,13 @@ export class Controller {
 			return;
 		}
 
-		// add user message
+		// add user message and clear the input immediately for a snappy UI
 		const user = this.model.addMessage(trimmed, 'user');
 		if (!user) return;
+		this.view.clearInput();
+		this.view.focusInput();
 
-		// get reply from active provider
+		// get reply from active provider (async)
 		try {
 			const replyText = await this.ai.reply(trimmed);
 			this.model.addMessage(replyText, 'bot');
@@ -104,9 +187,6 @@ export class Controller {
 			// make errors visible but not fatal
 			this.model.addMessage(`(error: ${err?.message || 'ai call failed'})`, 'bot');
 		}
-
-		this.view.clearInput();
-		this.view.focusInput();
 	}
 
 	// simple prompt-based editing when clicking the edit button
